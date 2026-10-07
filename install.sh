@@ -25,7 +25,8 @@ SCRIPT_VERSION="2.0.0"
 # ─── Constantes (verificadas en vivo) ─────────────────────────────────────────
 SUPABASE_URL="https://gegklkperqguypexsbtw.supabase.co"
 # Clave PUBLICABLE (apta para hardcodear en script público). NUNCA la secreta.
-SUPABASE_PUBLISHABLE_KEY="sb_publishable_2mnhOMAqU-3A7Yulzm6N_Q_TFXWFqS4"
+# Clave ANON (legacy JWT) — es pública por diseño; RLS + RPC controlan el acceso.
+SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlZ2tsa3BlcnFndXlwZXhzYnR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNTI2NjIsImV4cCI6MjA5OTYyODY2Mn0.v4yPjLb5FTw0MfGUouhsbS9pz-mlo0PU0TPJCUnIVSA"
 MANIFEST_URL="https://raw.githubusercontent.com/reinaagencia/suite-pack/main/manifest.public.json"
 SELF_URL="https://raw.githubusercontent.com/reinaagencia/installer/main/install.sh"
 LICENSE_FILE="${HOME}/.agents/suite-license.json"
@@ -309,8 +310,8 @@ ACT_BODY="$(printf '{"p_usuario":%s,"p_password":%s,"p_host":%s,"p_ip":%s,"p_os"
 
 ACT_RESP=""
 if ! ACT_RESP="$(printf '%s' "$ACT_BODY" | curl -sS -f -X POST "${SUPABASE_URL}/rest/v1/rpc/activar" \
-      -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
-      -H "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}" \
+      -H "apikey: ${SUPABASE_ANON_KEY}" \
+      -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
       -H "Content-Type: application/json" \
       --data-binary @- 2>/dev/null)"; then
   # Un error HTTP no debería ocurrir con la RPC; si pasa, informamos sin filtrar nada.
