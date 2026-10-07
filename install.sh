@@ -193,7 +193,8 @@ parse_activation() {
     out=$(printf '%s' "$json" | python3 -c '
 import json, sys, shlex
 keys = ["ok", "error", "cliente_slug", "cliente_nombre", "version",
-        "file_name", "pack_url", "pack_sha256", "pack_key", "algo"]
+        "file_name", "pack_url", "pack_sha256", "pack_key", "algo",
+        "reintento"]
 try:
     d = json.load(sys.stdin)
 except Exception:
@@ -212,10 +213,10 @@ for k in keys:
   if [ -z "$out" ]; then
     # Fallback sin python3: comillas simples seguras a mano.
     local k v sq
-    for k in ok error cliente_slug cliente_nombre version file_name pack_url pack_sha256 pack_key algo; do
-      if [ "$k" = "ok" ]; then
-        # 'ok' es booleano (sin comillas): json_field no lo captura.
-        if printf '%s' "$json" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'; then
+    for k in ok reintento error cliente_slug cliente_nombre version file_name pack_url pack_sha256 pack_key algo; do
+      if [ "$k" = "ok" ] || [ "$k" = "reintento" ]; then
+        # booleanos (sin comillas): json_field no los captura.
+        if printf '%s' "$json" | grep -q "\"${k}\"[[:space:]]*:[[:space:]]*true"; then
           v="true"
         else
           v="false"
@@ -320,7 +321,7 @@ if ! ACT_RESP="$(printf '%s' "$ACT_BODY" | curl -sS -f -X POST "${SUPABASE_URL}/
 fi
 
 # Inicializamos por si el eval no define algo (set -u).
-ok=""; error=""; error_code=""
+ok=""; error=""; error_code=""; reintento=""
 cliente_slug=""; cliente_nombre=""; version=""
 file_name=""; pack_url=""; pack_sha256=""; pack_key=""; algo=""
 
@@ -352,6 +353,9 @@ fi
 [ -n "${algo:-}" ] || algo="AES-256-CBC/PBKDF2-sha256/200000"
 
 log "Licencia activada para ${cliente_nombre} (v${PACK_VERSION})."
+if [ "${reintento:-}" = "true" ]; then
+  info "Reintento autorizado: esta credencial se usó hace menos de 30 minutos en este mismo equipo."
+fi
 
 # Validaciones defensivas: la RPC debe entregar todo lo necesario.
 for v in file_name pack_url pack_sha256 pack_key; do
@@ -378,7 +382,7 @@ trap cleanup EXIT INT TERM
 # ─── Descargar pack ───────────────────────────────────────────────────────────
 header "Descargando pack"
 info "Descargando ${file_name}…"
-if ! curl -fL --retry 3 --retry-delay 2 -o "$TMP/$file_name" "$pack_url"; then
+if ! curl -fsSL --retry 3 --retry-delay 2 -o "$TMP/$file_name" "$pack_url"; then
   error "No se pudo descargar el pack desde GitHub. Revisa tu conexión e intenta de nuevo."
   exit 1
 fi
